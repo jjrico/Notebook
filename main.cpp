@@ -1,22 +1,24 @@
 #include <iostream>
 #include <string>
-#include <vector>
 
 #include "notebook.hpp"
 
 int main() {
   char choice;
-  size_t index;
-  std::string filename, newTitle, newBody;
-  Notebook Diary;
-  Note newNote;
+  std::string rem;
+  std::string notes_filename;
+  int index;
 
-  std::cout << "Welcome to TuffyNotes!" << std::endl;
+  bool display_menu = true;
 
-  // do while loop is used so that the menu is displayed at least once even when
-  // choice has not yet been defined
+  Notebook note_list;
+
+  std::cout << "Welcome to the eNotes!\n";
+
   do {
+    std::cout << std::endl;
     std::cout << "[C] Create a note" << std::endl;
+    std::cout << "[N] Create an encrypted note" << std::endl;
     std::cout << "[L] List notes" << std::endl;
     std::cout << "[V] View note" << std::endl;
     std::cout << "[S] Save notes" << std::endl;
@@ -24,69 +26,62 @@ int main() {
     std::cout << "[E] Exit" << std::endl;
     std::cout << "Choice: ";
     std::cin >> choice;
-    std::cin.ignore();
 
-    // begin switch statement to create menu choice scenarios
+    // ignore the newline char that follows the user input for choice, but
+    // also check for multiple character input - therefore, read in the rest
+    // of the line. this will handle the case where the user enters more than
+    // one character, and if that has occurred, treat it as invalid since we
+    // cannot assume the first char entered is the choice the user desires
+    std::getline(std::cin, rem);
+    if (rem.length() > 0) {
+      choice = ' '; // set to invalid "choice"
+    }
+
     switch (choice) {
-    case 'c':
     case 'C':
-      std::cout << "\nPlease enter the note's title: ";
-      std::getline(std::cin, newTitle);
-      newNote.title_ = newTitle;
-
-      std::cout << "Please enter the note: ";
-      std::getline(std::cin, newBody);
-      newNote.body_ = newBody;
-
-      Diary.addNote(newNote);
+    case 'c':
+      note_list.addNote(createNote());
       break;
-
-    case 'l':
+    case 'N':
+    case 'n':
+      note_list.addNote(createEncryptedNote());
+      break;
     case 'L':
-      Diary.listNotes();
+    case 'l':
+      note_list.listNotes();
       break;
-
-    case 'v':
     case 'V':
-      Diary.listNotes();
-      std::cout << "Please input note index: ";
+    case 'v':
+      note_list.listNotes();
+      std::cout << "\nPlease input note index: ";
       std::cin >> index;
-      std::cin.ignore();
-      if (std::cin.fail()) {
-        std::cin.clear();
-        std::cin.ignore();
-        std::cout << "\nInvalid note index.\n" << std::endl;
-      } else {
-        Diary.viewNote(index);
-      }
+      note_list.viewNote(index);
       break;
-
-    case 's':
     case 'S':
+    case 's':
       std::cout << "\nPlease enter the filename: ";
-      std::cin >> filename;
+      std::getline(std::cin, notes_filename);
 
-      Diary.saveNotes(filename);
+      note_list.saveNotes(notes_filename);
       break;
-
-    case 'o':
     case 'O':
+    case 'o':
       std::cout << "\nPlease enter the filename: ";
-      std::cin >> filename;
-      Diary.loadNotes(filename);
-      break;
+      std::getline(std::cin, notes_filename);
 
-    case 'e':
+      note_list.loadNotes(notes_filename);
+      break;
     case 'E':
-      std::cout << std::endl << "Thank you for using Notebook!" << std::endl;
+    case 'e':
+      display_menu = false;
       break;
     default:
-      std::cout << std::endl
-                << "Invalid choice. Please try again." << std::endl
-                << std::endl;
+      std::cout << "\nInvalid choice. Please try again.\n";
+      break;
     }
-    // continue this statement until user inputs 'E' or 'e'
-  } while (choice != 'E' && choice != 'e');
+  } while (display_menu);
+
+  std::cout << "\nThank you for using eNotes!\n";
 
   return 0;
 }

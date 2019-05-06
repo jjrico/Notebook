@@ -1,88 +1,139 @@
-// function implementation file
-
-#include "notebook.hpp"
 #include <fstream>
 #include <iostream>
-#include <string>
-#include <vector>
+#include <stdexcept>
 
-// Adds input Note to back of the Notebook
-void Notebook::addNote(const Note &newNote) {
-  list_.push_back(newNote);
-  std::cout << "\nNote added!\n" << std::endl;
+#include "notebook.hpp"
+
+// global function definitions
+
+Note *createNote() {
+  std::string title, body;
+
+  std::cout << "\nPlease enter the note's title: ";
+  std::getline(std::cin, title);
+  std::cout << "Please enter the note: ";
+  std::getline(std::cin, body);
+
+  Note *note = new Note(title, body);
+
+  std::cout << "\nNote added!\n";
+
+  return note;
 }
+
+EncryptedNote *createEncryptedNote() {
+  std::string title, body, password;
+
+  std::cout << "\nPlease enter the note's title: ";
+  std::getline(std::cin, title);
+  std::cout << "Please enter the note: ";
+  std::getline(std::cin, body);
+  std::cout << "Please enter the password (case sensitiive): ";
+  std::getline(std::cin, password);
+
+  EncryptedNote *Enote = new EncryptedNote(title, body, password);
+
+  std::cout << "\nEncrypted Note added!\n";
+
+  return Enote;
+}
+
+// class EncryptedNote definitions
+
+void EncryptedNote::display() {
+  std::string password;
+  unsigned int chances = 3;
+
+  while (chances > 0) {
+    std::cout << "Please enter password to view note (case sensitive): ";
+    std::cin >> password;
+
+    if (password == password_) {
+      std::cout << "\n[" << getTitle() << "]\n";
+      std::cout << getBody() << "\n";
+      return;
+    }
+    std::cout << "Incorrect password, " << --chances << " chances remaining."
+              << std::endl;
+  }
+  throw std::out_of_range("Too many incorrect attempts. Please try again later.");
+}
+
+// class Note member function definitions
+
+void Note::display() {
+  std::cout << "\n[" << title_ << "]\n";
+  std::cout << body_ << "\n";
+}
+
+// class Notebook member function definitions
 
 void Notebook::listNotes() const {
-  if (list_.empty()) {
-    std::cout << "\nNo notes have been added.\n" << std::endl;
-    return;
-  }
-  std::cout << "\nNotes" << std::endl;
-  // loop through list_
-  // prints with format: #. title
-  for (int i = 0; i < list_.size(); i++) {
-    std::cout << i + 1 << ". " << list_[i].title_ << std::endl;
-  }
-  std::cout << std::endl;
-}
-
-void Notebook::viewNote(const size_t &index) {
-  if (list_.empty()) {
-    std::cout << "\nNo notes have been added.\n" << std::endl;
-    return;
-  }
-
-  if (index <= 0 || index > list_.size()) {
-    std::cout << "\nInvalid note index.\n" << std::endl;
-    return;
-  }
-  std::cout << "\n[" << list_[index - 1].title_ << "]" << std::endl;
-  std::cout << list_[index - 1].body_ << std::endl;
-  std::cout << std::endl;
-  return;
-}
-
-void Notebook::saveNotes(const std::string &filename) {
-  std::ofstream input_file;
-  input_file.open(filename);
-
-  for (const auto &i : list_) {
-    input_file << "[Note]\n";
-    input_file << i.title_ << "\n";
-    input_file << i.body_ << "\n";
-  }
-
-  std::cout << "\nNotes saved!\n" << std::endl;
-}
-
-void Notebook::loadNotes(const std::string &filename) {
-  std::ifstream input_file;
-  input_file.open(filename);
-
-  if (!input_file.is_open()) {
-    std::cout << "Error: No file named " << filename << std::endl;
-    return;
-  }
-  list_.clear();
-  std::string newLine, newTitle, newBody;
-
-  // skip over first [Note] incedence
-  input_file >> newBody;
-  input_file.ignore();
-
-  while (!input_file.eof()) {
-    std::getline(input_file, newTitle);
-    newBody = ""; // clear newBody
-    while (std::getline(input_file, newLine)) {
-      if (newLine != "[Note]") {
-        newBody += newLine; // add each line to newBody until [Note] is found
-      } else {
-        break;
-      }
+  if (notes_.empty()) {
+    throw std::range_error("No notes have been added.");
+  } else {
+    std::cout << "\nNotes" << std::endl;
+    int index = 0;
+    for (const auto &i : notes_) {
+      std::cout << ++index << ". " << i->getTitle() << std::endl;
     }
-    Note newNote(newTitle, newBody);
-    list_.push_back(newNote);
+  }
+}
+
+void Notebook::viewNote(const int& index) const {
+
+  if (index > 0 && index <= notes_.size()) {
+    notes_[index - 1]->display();
+  } else {
+    throw std::range_error("Invalid note index.");
+  }
+}
+
+void Notebook::saveNotes(const std::string &notesFilename) const {
+  std::ofstream outfile;
+  outfile.open(notesFilename);
+
+  for (const auto &i : notes_) {
+    outfile << i->serialize();
   }
 
-  std::cout << "\nNotes loaded!\n" << std::endl;
+  outfile.close();
+
+  std::cout << "\nNotes saved!\n";
+}
+
+void Notebook::loadNotes(const std::string &notesFilename) {
+  notes_.clear();
+
+  std::string temp_str;
+
+  std::ifstream infile;
+  infile.open(notesFilename);
+
+  if (infile.fail()) {
+    throw std::invalid_argument("Invalid filename. File not found.");
+  }
+
+  while (std::getline(infile, temp_str)) {
+    if (temp_str == "[Note]") {
+      Note *newNote = new Note;
+
+      std::getline(infile, temp_str);
+      newNote->setTitle(temp_str);
+      std::getline(infile, temp_str);
+      newNote->setBody(temp_str);
+
+      notes_.push_back(newNote);
+    } else if (temp_str == "[EncNote]") {
+      std::string title, body, password;
+      std::getline(infile, title);
+      std::getline(infile, body);
+      std::getline(infile, password);
+
+      notes_.push_back(new EncryptedNote(title, body, password));
+    }
+  }
+  infile.close();
+
+  std::cout << "\nNotes loaded!\n";
 }
