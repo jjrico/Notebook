@@ -13,7 +13,7 @@ int main() {
 
   Notebook note_list;
 
-  std::cout << "Welcome to the eNotes!\n";
+  std::cout << "Welcome to eNotes!\n";
 
   do {
     std::cout << std::endl;
